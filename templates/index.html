@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Inventario - Cultivo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="app-title">🌱 Gestión de Inventario</h1>
+                <div class="header-actions">
+                    <button id="exportBtn" class="btn btn-secondary">📊 Exportar Excel</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="navigation">
+            <button class="nav-btn active" data-section="dashboard">📊 Dashboard</button>
+            <button class="nav-btn" data-section="productos">📦 Productos</button>
+            <button class="nav-btn" data-section="etapas">🌱 Etapas</button>
+            <button class="nav-btn" data-section="sub-etapas">🔄 Sub-Etapas</button>
+            <button class="nav-btn" data-section="locaciones">📍 Locaciones</button>
+            <button class="nav-btn" data-section="movimientos">📋 Movimientos</button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section active">
+                <div class="section-header">
+                    <h2>Dashboard</h2>
+                </div>
+                
+                <!-- Alertas de Stock -->
+                <div id="stockAlerts" class="alerts-container"></div>
+                
+                <!-- KPIs -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-icon">📦</div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" id="totalProducts">0</div>
+                            <div class="kpi-label">Productos</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">🌱</div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" id="totalStages">0</div>
+                            <div class="kpi-label">Etapas</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">📍</div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" id="totalLocations">0</div>
+                            <div class="kpi-label">Locaciones</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">💰</div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" id="totalCost">$0</div>
+                            <div class="kpi-label">Costo Total</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficos del Dashboard - TODOS LOS GRÁFICOS -->
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Consumo por Producto</h3>
+                        <canvas id="dashboardConsumptionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Stock Actual vs Mínimo</h3>
+                        <canvas id="dashboardStockChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Consumo por Locación</h3>
+                        <canvas id="dashboardLocationChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Consumo por Etapa</h3>
+                        <canvas id="dashboardStageChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Gastos por Etapa</h3>
+                        <canvas id="dashboardExpensesChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Gastos por Locación</h3>
+                        <canvas id="dashboardLocationExpensesChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Tiempo Real vs Esperado - Etapas</h3>
+                        <canvas id="dashboardStageTimeChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Tiempo Real vs Esperado - Sub-Etapas</h3>
+                        <canvas id="dashboardSubstageTimeChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Productos Section -->
+            <section id="productos" class="section">
+                <div class="section-header">
+                    <h2>Gestión de Productos</h2>
+                    <button class="btn btn-primary" onclick="showProductForm()">➕ Nuevo Producto</button>
+                </div>
+
+                <!-- Lista de Productos -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Unidad</th>
+                                <th>Stock Actual</th>
+                                <th>Stock Mínimo</th>
+                                <th>Precio</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTableBody">
+                            <!-- Productos se cargan dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Gráficos de Productos -->
+                <div class="charts-section">
+                    <h3>Análisis de Productos</h3>
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <h4>Consumo por Producto</h4>
+                            <canvas id="productConsumptionChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h4>Stock Actual vs Mínimo</h4>
+                            <canvas id="productStockChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h4>Consumo por Locación</h4>
+                            <canvas id="productLocationChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h4>Consumo por Etapa</h4>
+                            <canvas id="productStageChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Etapas Section -->
+            <section id="etapas" class="section">
+                <div class="section-header">
+                    <h2>Gestión de Etapas</h2>
+                    <button class="btn btn-primary" onclick="showStageForm()">➕ Nueva Etapa</button>
+                </div>
+
+                <!-- Lista de Etapas -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Locación</th>
+                                <th>Duración Esperada</th>
+                                <th>Duración Real</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stagesTableBody">
+                            <!-- Etapas se cargan dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Gráficos de Etapas -->
+                <div class="charts-section">
+                    <h3>Análisis de Etapas</h3>
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <h4>Tiempo Real vs Esperado</h4>
+                            <canvas id="stageTimeChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h4>Gastos por Etapa</h4>
+                            <canvas id="stageExpensesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sub-Etapas Section -->
+            <section id="sub-etapas" class="section">
+                <div class="section-header">
+                    <h2>Gestión de Sub-Etapas</h2>
+                    <button class="btn btn-primary" onclick="showSubstageForm()">➕ Nueva Sub-Etapa</button>
+                </div>
+
+                <!-- Lista de Sub-Etapas -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Etapa</th>
+                                <th>Duración Esperada</th>
+                                <th>Duración Real</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="substagesTableBody">
+                            <!-- Sub-etapas se cargan dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Gráficos de Sub-Etapas -->
+                <div class="charts-section">
+                    <h3>Análisis de Sub-Etapas</h3>
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <h4>Tiempo Real vs Esperado</h4>
+                            <canvas id="substageTimeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Locaciones Section -->
+            <section id="locaciones" class="section">
+                <div class="section-header">
+                    <h2>Gestión de Locaciones</h2>
+                    <button class="btn btn-primary" onclick="showLocationForm()">➕ Nueva Locación</button>
+                </div>
+
+                <!-- Lista de Locaciones -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>Fecha Creación</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="locationsTableBody">
+                            <!-- Locaciones se cargan dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Gráficos de Locaciones -->
+                <div class="charts-section">
+                    <h3>Análisis de Locaciones</h3>
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <h4>Consumo por Locación</h4>
+                            <canvas id="locationConsumptionChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h4>Gastos por Locación</h4>
+                            <canvas id="locationExpensesChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h4>Tiempos Comparados por Locación</h4>
+                            <canvas id="locationTimeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Movimientos Section -->
+            <section id="movimientos" class="section">
+                <div class="section-header">
+                    <h2>Gestión de Movimientos</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="showMovementForm('uso')">➕ Registrar Uso</button>
+                        <button class="btn btn-primary" onclick="showMovementForm('compra')">➕ Registrar Compra</button>
+                        <button class="btn btn-secondary" onclick="showTransferForm()">🔄 Transferir</button>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="filters-container">
+                    <div class="filter-group">
+                        <label>Fecha Desde:</label>
+                        <input type="date" id="filterDateFrom" class="form-input">
+                    </div>
+                    <div class="filter-group">
+                        <label>Fecha Hasta:</label>
+                        <input type="date" id="filterDateTo" class="form-input">
+                    </div>
+                    <div class="filter-group">
+                        <label>Producto:</label>
+                        <select id="filterProduct" class="form-select">
+                            <option value="">Todos los productos</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Tipo:</label>
+                        <select id="filterType" class="form-select">
+                            <option value="">Todos los tipos</option>
+                            <option value="uso">Uso</option>
+                            <option value="compra">Compra</option>
+                            <option value="transferencia">Transferencia</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Etapa:</label>
+                        <select id="filterStage" class="form-select">
+                            <option value="">Todas las etapas</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Sub-Etapa:</label>
+                        <select id="filterSubstage" class="form-select">
+                            <option value="">Todas las sub-etapas</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary" onclick="applyFilters()">🔍 Filtrar</button>
+                    <button class="btn btn-outline" onclick="clearFilters()">🗑️ Limpiar</button>
+                </div>
+
+                <!-- Lista de Movimientos -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Productos</th>
+                                <th>Etapa</th>
+                                <th>Sub-Etapa</th>
+                                <th>Responsable</th>
+                                <th>Locación</th>
+                                <th>Costo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="movementsTableBody">
+                            <!-- Movimientos se cargan dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <!-- Modales -->
+        <!-- Modal de Producto -->
+        <div id="productModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="productModalTitle">Nuevo Producto</h3>
+                    <button class="modal-close" onclick="closeModal('productModal')">&times;</button>
+                </div>
+                <form id="productForm" class="modal-form">
+                    <div class="form-group">
+                        <label for="productName">Nombre *</label>
+                        <input type="text" id="productName" name="name" required class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="productUnit">Unidad *</label>
+                        <select id="productUnit" name="unit" required class="form-select">
+                            <option value="">Seleccionar unidad</option>
+                            <option value="kg">Kilogramos (kg)</option>
+                            <option value="g">Gramos (g)</option>
+                            <option value="l">Litros (l)</option>
+                            <option value="ml">Mililitros (ml)</option>
+                            <option value="unidades">Unidades</option>
+                            <option value="%">Porcentaje (%)</option>
+                            <option value="°C">Grados Celsius (°C)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="productInitialStock">Stock Inicial *</label>
+                        <input type="number" id="productInitialStock" name="initial_stock" required min="0" step="0.01" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="productMinStock">Stock Mínimo *</label>
+                        <input type="number" id="productMinStock" name="min_stock" required min="0" step="0.01" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="productPrice">Precio por Unidad *</label>
+                        <input type="number" id="productPrice" name="price" required min="0" step="0.01" class="form-input">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-outline" onclick="closeModal('productModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal de Etapa -->
+        <div id="stageModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="stageModalTitle">Nueva Etapa</h3>
+                    <button class="modal-close" onclick="closeModal('stageModal')">&times;</button>
+                </div>
+                <form id="stageForm" class="modal-form">
+                    <div class="form-group">
+                        <label for="stageName">Nombre *</label>
+                        <input type="text" id="stageName" name="name" required class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="stageLocation">Locación *</label>
+                        <select id="stageLocation" name="location_id" required class="form-select">
+                            <option value="">Seleccionar locación</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="stageExpectedDuration">Duración Esperada (días) *</label>
+                        <input type="number" id="stageExpectedDuration" name="expected_duration" required min="1" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="stageDescription">Descripción</label>
+                        <textarea id="stageDescription" name="description" class="form-textarea"></textarea>
+                    </div>
+                    
+                    <!-- Sub-etapas dinámicas -->
+                    <div class="form-group">
+                        <label>Sub-Etapas</label>
+                        <div id="substagesContainer">
+                            <!-- Sub-etapas se agregan dinámicamente -->
+                        </div>
+                        <button type="button" class="btn btn-outline" onclick="addSubstageField()">➕ Agregar Sub-Etapa</button>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-outline" onclick="closeModal('stageModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal de Sub-Etapa -->
+        <div id="substageModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="substageModalTitle">Nueva Sub-Etapa</h3>
+                    <button class="modal-close" onclick="closeModal('substageModal')">&times;</button>
+                </div>
+                <form id="substageForm" class="modal-form">
+                    <div class="form-group">
+                        <label for="substageName">Nombre *</label>
+                        <input type="text" id="substageName" name="name" required class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="substageStage">Etapa *</label>
+                        <select id="substageStage" name="stage_id" required class="form-select">
+                            <option value="">Seleccionar etapa</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="substageExpectedDuration">Duración Esperada (días) *</label>
+                        <input type="number" id="substageExpectedDuration" name="expected_duration" required min="1" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="substageDescription">Descripción</label>
+                        <textarea id="substageDescription" name="description" class="form-textarea"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-outline" onclick="closeModal('substageModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal de Locación -->
+        <div id="locationModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="locationModalTitle">Nueva Locación</h3>
+                    <button class="modal-close" onclick="closeModal('locationModal')">&times;</button>
+                </div>
+                <form id="locationForm" class="modal-form">
+                    <div class="form-group">
+                        <label for="locationName">Nombre *</label>
+                        <input type="text" id="locationName" name="name" required class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="locationDescription">Descripción</label>
+                        <textarea id="locationDescription" name="description" class="form-textarea"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-outline" onclick="closeModal('locationModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal de Movimiento -->
+        <div id="movementModal" class="modal">
+            <div class="modal-content large">
+                <div class="modal-header">
+                    <h3 id="movementModalTitle">Nuevo Movimiento</h3>
+                    <button class="modal-close" onclick="closeModal('movementModal')">&times;</button>
+                </div>
+                <form id="movementForm" class="modal-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="movementDate">Fecha *</label>
+                            <input type="datetime-local" id="movementDate" name="date" required class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="movementType">Tipo *</label>
+                            <select id="movementType" name="type" required class="form-select">
+                                <option value="uso">Uso</option>
+                                <option value="compra">Compra</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="movementResponsible">Responsable *</label>
+                            <input type="text" id="movementResponsible" name="responsible" required class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="movementLocation">Locación *</label>
+                            <select id="movementLocation" name="location" required class="form-select">
+                                <option value="">Seleccionar locación</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="movementStageFields" class="form-row">
+                        <div class="form-group">
+                            <label for="movementStage">Etapa</label>
+                            <select id="movementStage" name="stage_id" class="form-select">
+                                <option value="">Seleccionar etapa</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="movementSubstage">Sub-Etapa</label>
+                            <select id="movementSubstage" name="substage_id" class="form-select">
+                                <option value="">Seleccionar sub-etapa</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Productos -->
+                    <div class="form-group">
+                        <label>Productos *</label>
+                        <div id="movementProductsContainer">
+                            <!-- Productos se agregan dinámicamente -->
+                        </div>
+                        <button type="button" class="btn btn-outline" onclick="addMovementProduct()">➕ Agregar Producto</button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="movementObservations">Observaciones</label>
+                        <textarea id="movementObservations" name="observations" class="form-textarea"></textarea>
+                    </div>
+                    
+                    <div class="cost-display">
+                        <strong>Costo Total: $<span id="movementTotalCost">0.00</span></strong>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-outline" onclick="closeModal('movementModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal de Transferencia -->
+        <div id="transferModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Transferir Stock</h3>
+                    <button class="modal-close" onclick="closeModal('transferModal')">&times;</button>
+                </div>
+                <form id="transferForm" class="modal-form">
+                    <div class="form-group">
+                        <label for="transferProduct">Producto *</label>
+                        <select id="transferProduct" name="product_id" required class="form-select">
+                            <option value="">Seleccionar producto</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="transferQuantity">Cantidad *</label>
+                        <input type="number" id="transferQuantity" name="quantity" required min="0.01" step="0.01" class="form-input">
+                        <small id="transferAvailableStock" class="form-help"></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="transferUnit">Unidad *</label>
+                        <select id="transferUnit" name="unit" required class="form-select">
+                            <option value="kg">Kilogramos (kg)</option>
+                            <option value="g">Gramos (g)</option>
+                            <option value="l">Litros (l)</option>
+                            <option value="ml">Mililitros (ml)</option>
+                            <option value="unidades">Unidades</option>
+                            <option value="%">Porcentaje (%)</option>
+                            <option value="°C">Grados Celsius (°C)</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="transferFromLocation">Desde Locación *</label>
+                            <select id="transferFromLocation" name="from_location" required class="form-select">
+                                <option value="">Seleccionar origen</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="transferToLocation">Hacia Locación *</label>
+                            <select id="transferToLocation" name="to_location" required class="form-select">
+                                <option value="">Seleccionar destino</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="transferResponsible">Responsable *</label>
+                        <input type="text" id="transferResponsible" name="responsible" required class="form-input">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-outline" onclick="closeModal('transferModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Transferir</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toastContainer" class="toast-container"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
+
