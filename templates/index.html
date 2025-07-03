@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Inventario - Cultivo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="app-title">🌱 Gestión de Inventario</h1>
+                <div class="header-actions">
+                    <button id="exportBtn" class="btn btn-secondary">📊 Exportar Excel</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <div class="navigation-container">
+            <button class="nav-arrow left" id="navArrowLeft" onclick="scrollNavigation('left')">‹</button>
+            <nav class="navigation" id="navigation">
+                <button class="nav-btn active" data-section="dashboard">📊 Dashboard</button>
+                <button class="nav-btn" data-section="productos">📦 Productos</button>
+                <button class="nav-btn" data-section="etapas">🌱 Etapas</button>
+                <button class="nav-btn" data-section="sub-etapas">🔄 Sub-Etapas</button>
+                <button class="nav-btn" data-section="locaciones">📍 Locaciones</button>
+                <button class="nav-btn" data-section="movimientos">📋 Movimientos</button>
+                <button class="nav-btn" data-section="postits">📝 Post-it</button>
+                <button class="nav-btn" data-section="recetas">📚 Recetas</button>
+            </nav>
+            <button class="nav-arrow right" id="navArrowRight" onclick="scrollNavigation('right')">›</button>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section active">
+                <div class="section-header">
+                    <h2>Dashboard</h2>
+                </div>
+                
+                <!-- Alertas de Stock -->
+                <div id="stockAlerts" class="alerts-container"></div>
+                
+                <!-- KPIs -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-icon">📦</div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" id="totalProducts">0</div>
+                            <div class="kpi-label">Productos</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">🌱</div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" id="totalStages">0</div>
+                            <div class="kpi-label">Etapas</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">📍</div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" id="totalLocations">0</div>
+                            <div class="kpi-label">Locaciones</div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">💰</div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" id="totalCost">$0</div>
+                            <div class="kpi-label">Costo Total</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficos del Dashboard - TODOS LOS GRÁFICOS -->
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Consumo por Producto</h3>
+                        <canvas id="dashboardConsumptionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Stock Actual vs Mínimo</h3>
+                        <canvas id="dashboardStockChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Consumo por Locación</h3>
+                        <canvas id="dashboardLocationChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Consumo por Etapa</h3>
+                        <canvas id="dashboardStageChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Gastos por Etapa</h3>
+                        <canvas id="dashboardExpensesChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Gastos por Locación</h3>
+                        <canvas id="dashboardLocationExpensesChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Tiempo Etapas: Esperado vs Real</h3>
+                        <canvas id="dashboardStageTimeChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Tiempo Sub-Etapas: Esperado vs Real</h3>
+                        <canvas id="dashboardSubstageTimeChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Tiempo por Locación</h3>
+                        <canvas id="dashboardLocationTimeChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Productos Section -->
+            <section id="productos" class="section">
+                <div class="section-header">
+                    <h2>Gestión de Productos</h2>
+                    <button id="addProductBtn" class="btn btn-primary">➕ Agregar Producto</button>
+                </div>
+                
+                <!-- Lista de Productos -->
+                <div class="table-container">
+                    <table id="productsTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Unidad</th>
+                                <th>Stock Actual</th>
+                                <th>Stock Mínimo</th>
+                                <th>Precio</th>
+                                <th>Responsable</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Gráficos de Productos -->
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Consumo por Producto</h3>
+                        <canvas id="productConsumptionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Stock Actual vs Mínimo</h3>
+                        <canvas id="productStockChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Consumo por Locación</h3>
+                        <canvas id="productLocationChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Consumo por Etapa</h3>
+                        <canvas id="productStageChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Consumo por Producto por Sub-Etapa</h3>
+                        <canvas id="productSubstageChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Consumo Mensual por Producto</h3>
+                        <canvas id="productMonthlyConsumptionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Gasto Mensual por Producto</h3>
+                        <canvas id="productMonthlyExpenseChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Consumo Anual por Producto</h3>
+                        <canvas id="productYearlyConsumptionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Gasto Anual por Producto</h3>
+                        <canvas id="productYearlyExpenseChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Etapas Section -->
+            <section id="etapas" class="section">
+                <div class="section-header">
+                    <h2>Gestión de Etapas</h2>
+                    <button id="addStageBtn" class="btn btn-primary">➕ Agregar Etapa</button>
+                </div>
+                
+                <!-- Lista de Etapas -->
+                <div class="table-container">
+                    <table id="stagesTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Duración Esperada</th>
+                                <th>Duración Real</th>
+                                <th>Locación</th>
+                                <th>Responsable</th>
+                                <th>Estado</th>
+                                <th>Progreso</th>
+                                <th>Acciones</th>
+                                <th>Resumen</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Gráficos de Etapas -->
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Gastos por Etapa</h3>
+                        <canvas id="stageExpensesChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Tiempo Etapas: Esperado vs Real</h3>
+                        <canvas id="stageTimeChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Consumo por Etapa</h3>
+                        <canvas id="stageConsumptionChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sub-Etapas Section -->
+            <section id="sub-etapas" class="section">
+                <div class="section-header">
+                    <h2>Gestión de Sub-Etapas</h2>
+                    <button id="addSubstageBtn" class="btn btn-primary">➕ Agregar Sub-Etapa</button>
+                </div>
+                
+                <!-- Lista de Sub-Etapas -->
+                <div class="table-container">
+                    <table id="substagesTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Etapa</th>
+                                <th>Duración Esperada</th>
+                                <th>Duración Real</th>
+                                <th>Responsable</th>
+                                <th>Estado</th>
+                                <th>Progreso</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Gráficos de Sub-Etapas -->
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Tiempo Sub-Etapas: Esperado vs Real</h3>
+                        <canvas id="substageTimeChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Consumo por Sub-Etapa</h3>
+                        <canvas id="substageConsumptionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Gasto por Sub-Etapa</h3>
+                        <canvas id="substageExpenseChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Locaciones Section -->
+            <section id="locaciones" class="section">
+                <div class="section-header">
+                    <h2>Gestión de Locaciones</h2>
+                    <button id="addLocationBtn" class="btn btn-primary">➕ Agregar Locación</button>
+                </div>
+                
+                <!-- Lista de Locaciones -->
+                <div class="table-container">
+                    <table id="locationsTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>Responsable</th>
+                                <th>Fecha Creación</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Gráficos de Locaciones -->
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Gastos por Locación</h3>
+                        <canvas id="locationExpensesChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Consumo por Locación</h3>
+                        <canvas id="locationConsumptionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Tiempo por Locación</h3>
+                        <canvas id="locationTimeChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Consumo Mensual por Locación</h3>
+                        <canvas id="locationMonthlyConsumptionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Gasto Mensual por Locación</h3>
+                        <canvas id="locationMonthlyExpenseChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Consumo Anual por Locación</h3>
+                        <canvas id="locationYearlyConsumptionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Gasto Anual por Locación</h3>
+                        <canvas id="locationYearlyExpenseChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Movimientos Section -->
+            <section id="movimientos" class="section">
+                <div class="section-header">
+                    <h2>Registro de Movimientos</h2>
+                    <div class="header-actions">
+                        <button id="addMovementBtn" class="btn btn-primary">📝 Registrar Uso</button>
+                        <button id="addPurchaseBtn" class="btn btn-success">🛒 Registrar Compra</button>
+                        <button id="addTransferBtn" class="btn btn-info">🔄 Transferencia</button>
+                    </div>
+                </div>
+                
+                <!-- Filtros -->
+                <div class="filters-container">
+                    <select id="typeFilter" class="form-control">
+                        <option value="">Todos los tipos</option>
+                        <option value="uso">Uso</option>
+                        <option value="compra">Compra</option>
+                        <option value="transferencia">Transferencia</option>
+                    </select>
+                    <select id="locationFilter" class="form-control">
+                        <option value="">Todas las locaciones</option>
+                    </select>
+                    <input type="date" id="dateFilter" class="form-control">
+                    <button id="clearFilters" class="btn btn-secondary">Limpiar Filtros</button>
+                </div>
+                
+                <!-- Lista de Movimientos -->
+                <div class="table-container">
+                    <table id="movementsTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Productos</th>
+                                <th>Etapa</th>
+                                <th>Sub-Etapa</th>
+                                <th>Responsable</th>
+                                <th>Locación</th>
+                                <th>Costo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Post-it Section -->
+            <section id="postits" class="section">
+                <div class="section-header">
+                    <h2>Post-it Recordatorios</h2>
+                    <button id="addPostitBtn" class="btn btn-primary">➕ Nuevo Post-it</button>
+                </div>
+                
+                <!-- Grid de Post-it -->
+                <div id="postitsGrid" class="postits-grid"></div>
+            </section>
+
+            <!-- Recetas Section -->
+            <section id="recetas" class="section">
+                <div class="section-header">
+                    <h2>Gestión de Recetas y Documentos</h2>
+                    <div class="header-actions">
+                        <button id="uploadFileBtn" class="btn btn-primary">📄 Subir Archivo</button>
+                        <button id="uploadImageBtn" class="btn btn-success">🖼️ Subir Imagen</button>
+                    </div>
+                </div>
+                
+                <!-- Sección de Archivos -->
+                <div class="recipes-section">
+                    <h3>📄 Archivos de Recetas</h3>
+                    <div id="recipesList" class="recipes-list"></div>
+                </div>
+                
+                <!-- Sección de Imágenes -->
+                <div class="recipes-section">
+                    <h3>🖼️ Galería de Imágenes</h3>
+                    <div id="imagesGallery" class="images-gallery"></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Modales -->
+        
+        <!-- Modal Producto -->
+        <div id="productModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="productModalTitle">Agregar Producto</h3>
+                    <button class="close">&times;</button>
+                </div>
+                <form id="productForm">
+                    <div class="form-group">
+                        <label for="productName">Nombre *</label>
+                        <input type="text" id="productName" name="name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="productUnit">Unidad *</label>
+                        <select id="productUnit" name="unit" class="form-control" required>
+                            <option value="">Seleccionar unidad</option>
+                            <option value="kg">Kilogramos (kg)</option>
+                            <option value="g">Gramos (g)</option>
+                            <option value="l">Litros (l)</option>
+                            <option value="ml">Mililitros (ml)</option>
+                            <option value="unidades">Unidades</option>
+                            <option value="m">Metros (m)</option>
+                            <option value="cm">Centímetros (cm)</option>
+                            <option value="pH">pH</option>
+                            <option value="°C">Grados Celsius (°C)</option>
+                            <option value="EC">Conductividad Eléctrica (EC)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="productHasStock" name="has_stock" checked>
+                            Manejar stock (desmarcar para variables informativas)
+                        </label>
+                        <div class="form-text">Variables como temperatura, pH, EC no manejan stock</div>
+                    </div>
+                    <div id="stockFields">
+                        <div class="form-group">
+                            <label for="productInitialStock">Stock Inicial</label>
+                            <input type="number" id="productInitialStock" name="initial_stock" class="form-control" step="0.01" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="productCurrentStock">Stock Actual</label>
+                            <input type="number" id="productCurrentStock" name="current_stock" class="form-control" step="0.01" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="productMinStock">Stock Mínimo</label>
+                            <input type="number" id="productMinStock" name="min_stock" class="form-control" step="0.01" min="0">
+                        </div>
+                    </div>
+                    <div id="valueField" style="display: none;">
+                        <div class="form-group">
+                            <label for="productCurrentValue">Valor Actual</label>
+                            <input type="number" id="productCurrentValue" name="current_value" class="form-control" step="0.01">
+                            <div class="form-text">Valor actual de la variable (ej: 25°C, 6.5 pH)</div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="productPrice">Precio *</label>
+                        <input type="number" id="productPrice" name="price" class="form-control" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="productResponsible">Responsable *</label>
+                        <input type="text" id="productResponsible" name="responsible" class="form-control" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('productModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Etapa -->
+        <div id="stageModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="stageModalTitle">Agregar Etapa</h3>
+                    <button class="close">&times;</button>
+                </div>
+                <form id="stageForm">
+                    <div class="form-group">
+                        <label for="stageName">Nombre *</label>
+                        <input type="text" id="stageName" name="name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="stageDescription">Descripción</label>
+                        <textarea id="stageDescription" name="description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="stageLocation">Locación</label>
+                        <select id="stageLocation" name="location_id" class="form-control">
+                            <option value="">Seleccionar locación</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="stageExpectedDuration">Duración Esperada (días) *</label>
+                        <input type="number" id="stageExpectedDuration" name="expected_duration" class="form-control" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="stageResponsible">Responsable *</label>
+                        <input type="text" id="stageResponsible" name="responsible" class="form-control" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('stageModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Sub-Etapa -->
+        <div id="substageModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="substageModalTitle">Agregar Sub-Etapa</h3>
+                    <button class="close">&times;</button>
+                </div>
+                <form id="substageForm">
+                    <div class="form-group">
+                        <label for="substageName">Nombre *</label>
+                        <input type="text" id="substageName" name="name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="substageDescription">Descripción</label>
+                        <textarea id="substageDescription" name="description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="substageStage">Etapa *</label>
+                        <select id="substageStage" name="stage_id" class="form-control" required>
+                            <option value="">Seleccionar etapa</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="substageExpectedDuration">Duración Esperada (días) *</label>
+                        <input type="number" id="substageExpectedDuration" name="expected_duration" class="form-control" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="substageResponsible">Responsable *</label>
+                        <input type="text" id="substageResponsible" name="responsible" class="form-control" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('substageModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Locación -->
+        <div id="locationModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="locationModalTitle">Agregar Locación</h3>
+                    <button class="close">&times;</button>
+                </div>
+                <form id="locationForm">
+                    <div class="form-group">
+                        <label for="locationName">Nombre *</label>
+                        <input type="text" id="locationName" name="name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="locationDescription">Descripción</label>
+                        <textarea id="locationDescription" name="description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="locationResponsible">Responsable *</label>
+                        <input type="text" id="locationResponsible" name="responsible" class="form-control" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('locationModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Movimiento -->
+        <div id="movementModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="movementModalTitle">Registrar Movimiento</h3>
+                    <button class="close">&times;</button>
+                </div>
+                <form id="movementForm">
+                    <input type="hidden" id="movementType" name="type">
+                    <div class="form-group">
+                        <label for="movementStage">Etapa</label>
+                        <select id="movementStage" name="stage_id" class="form-control">
+                            <option value="">Seleccionar etapa</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="movementSubstage">Sub-Etapa</label>
+                        <select id="movementSubstage" name="substage_id" class="form-control">
+                            <option value="">Seleccionar sub-etapa</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="movementLocation">Locación</label>
+                        <select id="movementLocation" name="location_id" class="form-control">
+                            <option value="">Seleccionar locación</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="movementResponsible">Responsable *</label>
+                        <input type="text" id="movementResponsible" name="responsible" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Productos</label>
+                        <div id="productsContainer">
+                            <div class="product-row">
+                                <select class="product-select" name="product_id" required>
+                                    <option value="">Seleccionar producto</option>
+                                </select>
+                                <input type="number" class="quantity-input" name="quantity" placeholder="Cantidad" step="0.01" min="0.01" required>
+                                <span class="unit-display"></span>
+                                <button type="button" class="btn btn-danger btn-sm remove-product">Eliminar</button>
+                            </div>
+                        </div>
+                        <button type="button" id="addProductRow" class="btn btn-secondary btn-sm">➕ Agregar Producto</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="movementObservations">Observaciones</label>
+                        <textarea id="movementObservations" name="observations" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('movementModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Transferencia -->
+        <div id="transferModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Transferencia de Producto</h3>
+                    <button class="close">&times;</button>
+                </div>
+                <form id="transferForm">
+                    <input type="hidden" name="type" value="transferencia">
+                    <div class="form-group">
+                        <label for="transferProduct">Producto *</label>
+                        <select id="transferProduct" name="product_id" class="form-control" required>
+                            <option value="">Seleccionar producto</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="transferQuantity">Cantidad *</label>
+                        <input type="number" id="transferQuantity" name="quantity" class="form-control" step="0.01" min="0.01" required>
+                        <span id="transferUnit" class="form-text"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="transferFromLocation">Desde Locación</label>
+                        <select id="transferFromLocation" name="from_location_id" class="form-control">
+                            <option value="">Seleccionar locación origen</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="transferToLocation">Hacia Locación</label>
+                        <select id="transferToLocation" name="to_location_id" class="form-control">
+                            <option value="">Seleccionar locación destino</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="transferResponsible">Responsable *</label>
+                        <input type="text" id="transferResponsible" name="responsible" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="transferObservations">Observaciones</label>
+                        <textarea id="transferObservations" name="observations" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('transferModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Transferir</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Post-it -->
+        <div id="postitModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="postitModalTitle">Nuevo Post-it</h3>
+                    <button class="close">&times;</button>
+                </div>
+                <form id="postitForm">
+                    <div class="form-group">
+                        <label for="postitTitle">Título *</label>
+                        <input type="text" id="postitTitle" name="title" class="form-control" required maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="postitContent">Contenido *</label>
+                        <textarea id="postitContent" name="content" class="form-control" rows="4" required maxlength="500"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Color</label>
+                        <div class="color-picker">
+                            <input type="radio" name="color" value="#ffeb3b" id="color1" checked>
+                            <label for="color1" class="color-option" style="background-color: #ffeb3b;"></label>
+                            
+                            <input type="radio" name="color" value="#4caf50" id="color2">
+                            <label for="color2" class="color-option" style="background-color: #4caf50;"></label>
+                            
+                            <input type="radio" name="color" value="#2196f3" id="color3">
+                            <label for="color3" class="color-option" style="background-color: #2196f3;"></label>
+                            
+                            <input type="radio" name="color" value="#ff9800" id="color4">
+                            <label for="color4" class="color-option" style="background-color: #ff9800;"></label>
+                            
+                            <input type="radio" name="color" value="#f44336" id="color5">
+                            <label for="color5" class="color-option" style="background-color: #f44336;"></label>
+                            
+                            <input type="radio" name="color" value="#9c27b0" id="color6">
+                            <label for="color6" class="color-option" style="background-color: #9c27b0;"></label>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('postitModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Subir Archivo -->
+        <div id="uploadFileModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Subir Archivo de Receta</h3>
+                    <button class="close">&times;</button>
+                </div>
+                <form id="uploadFileForm" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="fileName">Nombre *</label>
+                        <input type="text" id="fileName" name="name" class="form-control" required maxlength="200">
+                        <div class="form-text">Nombre descriptivo para el archivo</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="fileUpload">Archivo *</label>
+                        <input type="file" id="fileUpload" name="file" class="form-control" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" required>
+                        <div class="form-text">Formatos permitidos: PDF, Word, Excel, TXT (máx. 16MB)</div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('uploadFileModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Subir</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Subir Imagen -->
+        <div id="uploadImageModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Subir Imagen</h3>
+                    <button class="close">&times;</button>
+                </div>
+                <form id="uploadImageForm" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="imageTitle">Título *</label>
+                        <input type="text" id="imageTitle" name="title" class="form-control" required maxlength="200">
+                        <div class="form-text">Ej: "Gorila Glue Etapa 4 Floración"</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="imageComment">Comentario</label>
+                        <textarea id="imageComment" name="comment" class="form-control" rows="3" maxlength="500"></textarea>
+                        <div class="form-text">Descripción detallada de la imagen</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="imageUpload">Imagen *</label>
+                        <input type="file" id="imageUpload" name="image" class="form-control" accept="image/*" required>
+                        <div class="form-text">Formatos permitidos: JPG, PNG, GIF (máx. 16MB)</div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('uploadImageModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Subir</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Editar Movimiento -->
+        <div id="editMovementModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Editar Movimiento</h3>
+                    <button class="close">&times;</button>
+                </div>
+                <form id="editMovementForm" onsubmit="handleEditMovementSubmit(event)">
+                    <input type="hidden" id="editMovementId" name="movement_id">
+                    <div class="form-group">
+                        <label for="editMovementStage">Etapa</label>
+                        <select id="editMovementStage" name="stage_id" class="form-control">
+                            <option value="">Seleccionar etapa</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editMovementSubstage">Sub-Etapa</label>
+                        <select id="editMovementSubstage" name="substage_id" class="form-control">
+                            <option value="">Seleccionar sub-etapa</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editMovementLocation">Locación</label>
+                        <select id="editMovementLocation" name="location_id" class="form-control">
+                            <option value="">Seleccionar locación</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editMovementResponsible">Responsable *</label>
+                        <input type="text" id="editMovementResponsible" name="responsible" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editMovementObservations">Observaciones</label>
+                        <textarea id="editMovementObservations" name="observations" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('editMovementModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Actualizar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Ver Imagen -->
+        <div id="imageViewModal" class="modal">
+            <div class="modal-content image-modal-content">
+                <div class="modal-header">
+                    <h3 id="imageViewTitle">Imagen</h3>
+                    <button class="close">&times;</button>
+                </div>
+                <div class="image-view-container">
+                    <img id="imageViewImg" src="" alt="Imagen">
+                    <div class="image-details">
+                        <p id="imageViewComment"></p>
+                        <small id="imageViewDate"></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
+
